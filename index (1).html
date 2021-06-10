@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+        integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+
+    <title>Request List</title>
+
+</head>
+
+<body>
+    <script src="https://www.gstatic.com/firebasejs/7.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.22.0/firebase-firestore.js"></script>
+    <ul class="nav snavbar navbar-dark bg-primary">
+        <li class="nav-item">
+            <a class="nav-link" href="#" style="color: white;" tabindex="-1">Song requset</a>
+        </li>
+        <!-- <div style="position: absolute;        right: 1%;        top: 2%;        color: white;">
+            v1.0.0
+        </div> -->
+    </ul>
+    <h1 class="p-2"></h1>
+
+    <div style="display: flex; overflow-y: hide;width: 100%;">
+        <div style="width: 50%;padding: 5px;">
+            <label for="">New song request</label>
+            <ol class="list-group list-group-numbered" id="new-song-list">
+            </ol>
+        </div>
+        <div style="width: 50%;padding: 5px;">
+            <label for="">Old Request</label>
+            <ol class="list-group list-group-numbered" id="completed-song-list">
+            </ol>
+        </div>
+    </div>
+
+
+
+</body>
+
+<script>
+    // variables
+    const FirebaseConfig = {
+        apiKey: "AIzaSyD_rDqW2sJo8OpBOyQJ2mgFjncGR0ic7m0",
+        authDomain: "sprint-3-1-60a71.firebaseapp.com",
+        projectId: "sprint-3-1-60a71",
+        storageBucket: "sprint-3-1-60a71.appspot.com",
+        messagingSenderId: "805765451116",
+        appId: "1:805765451116:web:0cd12e9315a45355053749",
+        measurementId: "G-VWQ20R35D9"
+    };
+    firebase.initializeApp(FirebaseConfig);
+    const firestore = firebase.firestore();
+
+
+    setTimeout(() => {
+        fetchTasks();
+    }, 1000)
+
+    function fetchTasks() {
+        let dateString = (new Date().getMonth() + 1) + '-' + new Date().getDate() + '-' + new Date().getFullYear();
+        return firestore
+            .collection("songrequest")
+            .where("timestamp", ">=", new Date(dateString).valueOf())
+            .where("timestamp", "<=", new Date(dateString).valueOf() + 24 * 60 * 60 * 1000)
+            .get()
+            .then((snapshots) => cleanData(snapshots))
+            .then((request) => {
+                renderRequest(request);
+            });
+    }
+
+    function accept(id) {
+        handleStatusUpdate(id, 1)
+    }
+    function reject(id) {
+        handleStatusUpdate(id, 2)
+    }
+
+    function renderRequest(request) {
+        // var data = [{ link: 'https://youtu.be/6pcdlnNYZns', songname: 'Mai hoo na' }];
+        var data = request;
+
+        var newSongList = '';
+        var processedSongList = '';
+
+        for (var i = 0; i < data.length; i++) {
+
+            if (data[i].status == 0) {
+                let list = `
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <span> <span class="bolt-text"> User : </span>  ${data[i].username}</span>
+                                <br>
+                                <span class="bolt-text">  Link : </span> <a href="${data[i].link}">${data[i].songname}</a>
+                            </div>
+                            <div class="action-button">
+                                <button type="button" onclick="accept('${data[i]._id}')" class="accept btn btn-sm btn-primary">Accept</button>
+                                <button type="button" onclick="reject('${data[i]._id}')" class="reject btn btn-sm btn-danger">Reject </button>
+                            </div>
+                        </li>
+                `;
+                newSongList += list;
+            } else {
+                let list = `
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <span><span class="bolt-text"> User : </span>   ${data[i].username}</span>
+                                </br>
+                                <span class="bolt-text">  Link : </span>   <a href="${data[i].link}">${data[i].songname}</a>
+                            </div>
+                            <div class="action-button">
+                                    ${data[i].status == 1 ? '<button class="accept btn btn-sm btn-primary">Accepted</button>':'<button type="button"  class="reject btn btn-sm btn-danger">Rejected </button>' }
+                            </div>
+                        </li>
+                `;
+                processedSongList += list;
+            }
+        }
+
+        var songList = document.getElementById('new-song-list');
+        songList.innerHTML = newSongList;
+        var completedlist = document.getElementById('completed-song-list');
+        completedlist.innerHTML = processedSongList;
+
+        setTimeout(() => { fetchTasks(); }, 4000)
+    }
+
+    var songList = document.getElementById('completed-song-list');
+
+    function handleStatusUpdate(id, status) {
+        let updatedTask = {
+            status: status,
+        };
+        return firestore
+            .collection("songrequest")
+            .doc(id)
+            .update(updatedTask)
+            .then((res) => {
+                fetchTasks();
+            });
+    }
+
+    // utility functions
+    function cleanData(snapshots) {
+        let data = [];
+        snapshots.forEach(function (doc) {
+            data.push({ _id: doc.id, ...doc.data() });
+        });
+        return data;
+    }
+
+</script>
+
+<style>
+    .fw-bold {
+        font-weight: 500;
+    }
+
+    .action-button {
+        text-align: right;
+        width: 74px !important;
+
+    }
+
+    .action-button,
+    .accept {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    .action-button,
+    .reject {
+        width: 100%;
+    }
+
+    .me-auto {
+        padding: 0px 10px 0px 10px;
+    }
+
+    .bolt-text {
+        font-weight: 600;
+    }
+</style>
+
+</html>
+
+<!-- https://www.skcript.com/svr/web-app-using-html-js-firebase-part-1/ -->
